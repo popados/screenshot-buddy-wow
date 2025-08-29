@@ -49,9 +49,9 @@ Added a default prefix for the screenshots. Defaults to the character name.
 
 Split into multiple files and better folder structure. List out all features and what I want each to do as a function.
 
-[!Slash Commands](./img/Screenshot%202025-08-29%20at%205.56.05%E2%80%AFPM.png)
+![Slash Commands](./img/Screenshot%202025-08-29%20at%205.56.05%E2%80%AFPM.png)
 
-[!Interface Options](./img/Screenshot%202025-08-29%20at%205.56.28%E2%80%AFPM.png)
+![Interface Options](./img/Screenshot%202025-08-29%20at%205.56.28%E2%80%AFPM.png)
 
 ***
 
