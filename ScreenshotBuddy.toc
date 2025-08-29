@@ -1,0 +1,10 @@
+## Interface: 11404
+## Title: Screenshot Buddy
+## Notes: Takes screenshots on level up, skill up, timer, death, login, logout. (Classic version)
+## Author: you
+## Version: 1.1.0
+## SavedVariables: ScreenshotBuddyDB
+## X-Category: Screenshot
+
+ScreenshotBuddy.lua
+ScreenshotBuddyOptions.lua
