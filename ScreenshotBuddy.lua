@@ -2,6 +2,7 @@
 -- Events: level up, skill up, timer, death, login, logout
 
 local ADDON = ...
+local optionsPanel
 local function dprint(...) if ScreenshotBuddyDB and ScreenshotBuddyDB.verbose then print("|cff4bf5ff[SB]|r", ...) end end
 
 --------------------------------------------------
@@ -12,6 +13,7 @@ local DEFAULTS = {
   interval = 900,
   delay = 1.0,
   verbose = true,
+  prefix = "",
 }
 
 local function ensureDefaults()
@@ -23,6 +25,8 @@ local function ensureDefaults()
   if ScreenshotBuddyDB.interval == nil then ScreenshotBuddyDB.interval = DEFAULTS.interval end
   if ScreenshotBuddyDB.delay == nil then ScreenshotBuddyDB.delay = DEFAULTS.delay end
   if ScreenshotBuddyDB.verbose == nil then ScreenshotBuddyDB.verbose = DEFAULTS.verbose end
+  if ScreenshotBuddyDB.prefix == nil then
+    ScreenshotBuddyDB.prefix = DEFAULTS.prefix end
 end
 
 --------------------------------------------------
@@ -32,7 +36,11 @@ local function TakeShot(reason)
   local delay = ScreenshotBuddyDB and ScreenshotBuddyDB.delay or DEFAULTS.delay
   if reason then dprint("Screenshot queued:", reason, string.format("(in %.1fs)", delay)) end
   C_Timer.After(delay, function()
+    if ScreenshotBuddyDB.prefix and ScreenshotBuddyDB.prefix ~= "" then
+      Screenshot(ScreenshotBuddyDB.prefix .. "_") -- WoW appends timestamp automatically
+  else 
     Screenshot()
+  end  
     if reason then dprint("Screenshot taken:", reason) end
   end)
 end
@@ -98,6 +106,117 @@ f:SetScript("OnEvent", function(self, event, ...)
   end
 end)
 
+
+--------------------------------------------------
+-- Interface Options Panel
+--------------------------------------------------
+local optionsPanel = CreateFrame("Frame", ADDON.."OptionsPanel", InterfaceOptionsFramePanelContainer)
+optionsPanel.name = "Screenshot Buddy"
+
+-- Register panel with options
+-- Old: InterfaceOptions_AddCategory(panel)
+local category = Settings.RegisterCanvasLayoutCategory(optionsPanel, optionsPanel.name)
+Settings.RegisterAddOnCategory(category)
+
+--Show Options Panel
+optionsPanel:Hide()
+optionsPanel:SetScript("OnShow", function(self)
+  if self.inited then return end
+  self.inited = true
+
+  local title = self:CreateFontString(nil, "ARTWORK", "GameFontNormalLarge")
+  title:SetPoint("TOPLEFT", 16, -16)
+  title:SetText("Screenshot Buddy (Classic)")
+
+  local subtitle = self:CreateFontString(nil, "ARTWORK", "GameFontHighlightSmall")
+  subtitle:SetPoint("TOPLEFT", title, "BOTTOMLEFT", 0, -8)
+  subtitle:SetText("Automatically take screenshots for various events.")
+
+  --------------------------------------------------
+  -- Helper to make checkboxes
+  --------------------------------------------------
+  local function CreateCheck(label, key, yOff)
+    local cb = CreateFrame("CheckButton", ADDON.."CB"..key, self, "InterfaceOptionsCheckButtonTemplate")
+    cb:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, yOff)
+    cb.Text:SetText(label)
+    cb:SetScript("OnClick", function(self)
+      ScreenshotBuddyDB.enabled[key] = self:GetChecked()
+      if key == "timed" then refreshTicker() end
+    end)
+    cb:SetChecked(ScreenshotBuddyDB.enabled[key])
+    return cb
+  end
+
+  local y = -8
+  CreateCheck("Level Up", "levelup", y);   y = y - 24
+  CreateCheck("Skill Up", "skillup", y);   y = y - 24
+  CreateCheck("Death", "death", y);        y = y - 24
+  CreateCheck("Login", "login", y);        y = y - 24
+  CreateCheck("Logout", "logout", y);      y = y - 24
+  CreateCheck("Timed Screenshots", "timed", y); y = y - 32
+
+  --------------------------------------------------
+  -- Interval slider
+  --------------------------------------------------
+  local intervalSlider = CreateFrame("Slider", ADDON.."IntervalSlider", self, "OptionsSliderTemplate")
+  intervalSlider:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 200, -20)
+  intervalSlider:SetMinMaxValues(10, 3600)
+  intervalSlider:SetValueStep(10)
+  intervalSlider:SetObeyStepOnDrag(true)
+  intervalSlider:SetWidth(200)
+  _G[intervalSlider:GetName().."Low"]:SetText("10s")
+  _G[intervalSlider:GetName().."High"]:SetText("3600s")
+  _G[intervalSlider:GetName().."Text"]:SetText("Timed Interval (sec)")
+  intervalSlider:SetScript("OnValueChanged", function(self, value)
+    ScreenshotBuddyDB.interval = math.floor(value)
+    refreshTicker()
+  end)
+  intervalSlider:SetValue(ScreenshotBuddyDB.interval)
+
+  --------------------------------------------------
+  -- Delay slider
+  --------------------------------------------------
+  local delaySlider = CreateFrame("Slider", ADDON.."DelaySlider", self, "OptionsSliderTemplate")
+  delaySlider:SetPoint("TOPLEFT", intervalSlider, "BOTTOMLEFT", 0, -40)
+  delaySlider:SetMinMaxValues(0, 5)
+  delaySlider:SetValueStep(0.1)
+  delaySlider:SetObeyStepOnDrag(true)
+  delaySlider:SetWidth(200)
+  _G[delaySlider:GetName().."Low"]:SetText("0s")
+  _G[delaySlider:GetName().."High"]:SetText("5s")
+  _G[delaySlider:GetName().."Text"]:SetText("Screenshot Delay (sec)")
+  delaySlider:SetScript("OnValueChanged", function(self, value)
+    ScreenshotBuddyDB.delay = tonumber(string.format("%.1f", value))
+  end)
+  delaySlider:SetValue(ScreenshotBuddyDB.delay)
+
+  --------------------------------------------------
+  -- Verbose toggle
+  --------------------------------------------------
+  local verboseCB = CreateFrame("CheckButton", ADDON.."VerboseCB", self, "InterfaceOptionsCheckButtonTemplate")
+  verboseCB:SetPoint("TOPLEFT", delaySlider, "BOTTOMLEFT", 0, -30)
+  verboseCB.Text:SetText("Verbose Mode (chat feedback)")
+  verboseCB:SetScript("OnClick", function(self)
+    ScreenshotBuddyDB.verbose = self:GetChecked()
+  end)
+  verboseCB:SetChecked(ScreenshotBuddyDB.verbose)
+  
+  local prefixLabel = self:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+  prefixLabel:SetPoint("TOPLEFT", verboseCB, "BOTTOMLEFT", -200, -25)
+  prefixLabel:SetText("Screenshot Prefix:")
+
+
+  local prefixBox = CreateFrame("EditBox", ADDON.."SB_PrefixBox", self, "InputBoxTemplate")
+  prefixBox:SetSize(200, 20)
+  prefixBox:SetPoint("TOPLEFT", verboseCB, "BOTTOMLEFT", 20, -405)
+  prefixBox:SetAutoFocus(false)
+  prefixBox:SetText("")ß
+  prefixBox:SetMaxLetters(50)
+  prefixBox:SetScript("OnTextChanged", function(self)
+    ScreenshotBuddyDB.prefix = self:GetText()
+
+end)
+end)
 --------------------------------------------------
 -- Slash commands (/sb)
 --------------------------------------------------
@@ -140,7 +259,11 @@ SlashCmdList.SCREENSHOTBUDDY = function(msg)
     print(args[2],args[1]=="on" and "enabled" or "disabled")
     return
   end
+  if args[1]=="panel" then
+    Settings.OpenToCategory(optionsPanel.name)
+    Settings.OpenToCategory(optionsPanel.name)
 
+    return
+  end
   help()
 end
-
