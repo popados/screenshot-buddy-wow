@@ -21,6 +21,8 @@ Main types of screenshots:
 - Death
 - Login
 - Logout
+- Boss deaths
+- X mobs at Y timeframe
 
 Features:
 
@@ -28,8 +30,10 @@ Features:
 - Interface panel
 - Types of screenshots
 - Name screenshots
+  - prefix
+  - timestamp
+  - folder structure
 - Create folders for types of screenshots
-- 
 
 ***
 
@@ -40,6 +44,14 @@ Features:
 ### Day 001 | 8/29/2025 - Friday
 
 Vibe coding with chatgpt to build this addon. Want to have full screenshot functionality for World of Warcraft. Including events such as leveling up and dying, as well as, timed intervals and login events.
+
+Added a default prefix for the screenshots. Defaults to the character name.
+
+Split into multiple files and better folder structure. List out all features and what I want each to do as a function.
+
+[!Slash Commands](./img/Screenshot%202025-08-29%20at%205.56.05%E2%80%AFPM.png)
+
+[!Interface Options](./img/Screenshot%202025-08-29%20at%205.56.28%E2%80%AFPM.png)
 
 ***
 

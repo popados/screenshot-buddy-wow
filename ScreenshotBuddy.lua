@@ -13,7 +13,7 @@ local DEFAULTS = {
   interval = 900,
   delay = 1.0,
   verbose = true,
-  prefix = "",
+  prefix = nil,
 }
 
 local function ensureDefaults()
@@ -25,8 +25,8 @@ local function ensureDefaults()
   if ScreenshotBuddyDB.interval == nil then ScreenshotBuddyDB.interval = DEFAULTS.interval end
   if ScreenshotBuddyDB.delay == nil then ScreenshotBuddyDB.delay = DEFAULTS.delay end
   if ScreenshotBuddyDB.verbose == nil then ScreenshotBuddyDB.verbose = DEFAULTS.verbose end
-  if ScreenshotBuddyDB.prefix == nil then
-    ScreenshotBuddyDB.prefix = DEFAULTS.prefix end
+  if ScreenshotBuddyDB.prefix == nil or ScreenshotBuddyDB.prefix == "" then
+    ScreenshotBuddyDB.prefix = UnitName("player") end  
 end
 
 --------------------------------------------------
@@ -35,12 +35,20 @@ end
 local function TakeShot(reason)
   local delay = ScreenshotBuddyDB and ScreenshotBuddyDB.delay or DEFAULTS.delay
   if reason then dprint("Screenshot queued:", reason, string.format("(in %.1fs)", delay)) end
+
   C_Timer.After(delay, function()
-    if ScreenshotBuddyDB.prefix and ScreenshotBuddyDB.prefix ~= "" then
-      Screenshot(ScreenshotBuddyDB.prefix .. "_") -- WoW appends timestamp automatically
-  else 
-    Screenshot()
-  end  
+    local prefix = ScreenshotBuddyDB and ScreenshotBuddyDB.prefix
+    if not prefix or prefix == "" then
+      prefix = UnitName("player") or "Screenshot"
+    end
+
+    -- If prefix exists, add it, otherwise just call Screenshot()
+    if prefix and prefix ~= "" then
+      Screenshot(prefix .. "_") -- WoW appends timestamp automatically
+    else
+      Screenshot()
+    end
+
     if reason then dprint("Screenshot taken:", reason) end
   end)
 end
@@ -155,6 +163,33 @@ optionsPanel:SetScript("OnShow", function(self)
   CreateCheck("Logout", "logout", y);      y = y - 24
   CreateCheck("Timed Screenshots", "timed", y); y = y - 32
 
+    
+  local prefixLabel = self:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+  prefixLabel:SetPoint("TOPLEFT", subtitle, "BOTTOMLEFT", 0, -175)
+  prefixLabel:SetText("Screenshot Prefix:")
+
+  local prefixBox = CreateFrame("EditBox", "SB_PrefixBox", optionsPanel, "InputBoxTemplate")
+  prefixBox:SetSize(200, 20)
+  prefixBox:SetPoint("TOPLEFT", prefixLabel, "BOTTOMLEFT", 0, -5)
+  prefixBox:SetAutoFocus(false)
+  -- prefixBox:SetText(ScreenshotBuddyDB.prefix)
+  prefixBox:SetMaxLetters(50)
+
+
+  prefixBox:SetScript("OnShow", function(self)
+    self:SetText(ScreenshotBuddyDB.prefix or UnitName("player"))
+  end)
+  
+  prefixBox:SetScript("OnEditFocusLost", function(self)
+    local text = self:GetText():trim()
+    if text == "" then
+      ScreenshotBuddyDB.prefix = UnitName("player")
+      self:SetText(ScreenshotBuddyDB.prefix)
+    else
+      ScreenshotBuddyDB.prefix = text
+    end
+  end)
+  
   --------------------------------------------------
   -- Interval slider
   --------------------------------------------------
@@ -200,22 +235,7 @@ optionsPanel:SetScript("OnShow", function(self)
     ScreenshotBuddyDB.verbose = self:GetChecked()
   end)
   verboseCB:SetChecked(ScreenshotBuddyDB.verbose)
-  
-  local prefixLabel = self:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-  prefixLabel:SetPoint("TOPLEFT", verboseCB, "BOTTOMLEFT", -200, -25)
-  prefixLabel:SetText("Screenshot Prefix:")
 
-
-  local prefixBox = CreateFrame("EditBox", ADDON.."SB_PrefixBox", self, "InputBoxTemplate")
-  prefixBox:SetSize(200, 20)
-  prefixBox:SetPoint("TOPLEFT", verboseCB, "BOTTOMLEFT", 20, -405)
-  prefixBox:SetAutoFocus(false)
-  prefixBox:SetText("")ß
-  prefixBox:SetMaxLetters(50)
-  prefixBox:SetScript("OnTextChanged", function(self)
-    ScreenshotBuddyDB.prefix = self:GetText()
-
-end)
 end)
 --------------------------------------------------
 -- Slash commands (/sb)
